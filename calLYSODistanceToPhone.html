@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>LYSO 距离计算器</title>
+    <!-- PWA: 允许添加到手机主屏幕 -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="LYSO计算器">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧲</text></svg>">
+    <style>
+        :root {
+            --bg: #0e1117;
+            --card: #1a1c23;
+            --text: #fafafa;
+            --sub: #a0a0a0;
+            --accent: #ff4b4b;
+            --green: #09ab3b;
+            --border: #2e3039;
+            --input-bg: #262730;
+            --radius: 12px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 16px;
+            min-height: 100vh;
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+        .container { max-width: 500px; margin: 0 auto; width: 100%; flex: 1; }
+        h1 { font-size: 1.4rem; text-align: center; margin: 8px 0 4px; }
+        .subtitle { color: var(--sub); font-size: 0.85rem; text-align: center; margin-bottom: 16px; }
+
+        .section-title {
+            font-size: 0.95rem; font-weight: 600; margin: 16px 0 10px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .section-title::before { font-size: 1.1rem; }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            margin-bottom: 12px;
+        }
+
+        /* 输入组 */
+        .input-group { margin-bottom: 14px; }
+        .input-group label {
+            display: block; font-size: 0.82rem; color: var(--sub);
+            margin-bottom: 4px; font-weight: 500;
+        }
+        .input-row {
+            display: flex; align-items: center; gap: 8px;
+        }
+        .input-row input[type="range"] { flex: 1; accent-color: var(--accent); height: 6px; }
+        .input-row input[type="number"] {
+            width: 88px; background: var(--input-bg); color: var(--text);
+            border: 1px solid var(--border); border-radius: 8px;
+            padding: 8px 10px; font-size: 1rem; text-align: center;
+            -webkit-appearance: none; appearance: none;
+        }
+        .input-row .unit { color: var(--sub); font-size: 0.8rem; min-width: 20px; }
+
+        /* 结果卡片 */
+        .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .result-item {
+            background: var(--input-bg); border-radius: 8px;
+            padding: 12px; text-align: center;
+        }
+        .result-item .label { font-size: 0.7rem; color: var(--sub); margin-bottom: 2px; }
+        .result-item .value { font-size: 1.15rem; font-weight: 700; }
+
+        .main-result {
+            background: #0a2e15; border: 1px solid #1a5c2a; border-radius: var(--radius);
+            padding: 16px; text-align: center; margin-top: 12px;
+        }
+        .main-result .label { font-size: 0.8rem; color: #6fcf8a; margin-bottom: 4px; }
+        .main-result .value { font-size: 1.5rem; font-weight: 800; color: #3ef06b; }
+
+        /* 错误/警告 */
+        .alert {
+            background: #2e1515; border: 1px solid #5c1a1a; border-radius: var(--radius);
+            padding: 12px 16px; color: #ff6b6b; font-size: 0.9rem; text-align: center;
+            margin-top: 12px;
+        }
+
+        /* 示意图占位 */
+        .diagram {
+            background: var(--card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 20px;
+            text-align: center; color: var(--sub); font-size: 0.8rem;
+            margin-top: 12px; min-height: 120px;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        .footer {
+            text-align: center; color: #555; font-size: 0.7rem;
+            margin-top: auto; padding-top: 16px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🧲 LYSO 暗箱距离计算器</h1>
+    <p class="subtitle">电子动量 · 磁场强度 · 实时推算</p>
+
+    <!-- ===== 输入区 ===== -->
+    <div class="card">
+        <div class="section-title">📥 物理参数输入</div>
+
+        <div class="input-group">
+            <label>电子能量 P (GeV)</label>
+            <div class="input-row">
+                <input type="range" id="p_range" min="0.01" max="2" step="0.01" value="0.4"
+                       oninput="syncInput('p_range', 'p_num'); calc();">
+                <input type="number" id="p_num" value="0.40" step="0.01"
+                       oninput="syncInput('p_num', 'p_range'); calc();">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>磁铁长度 L (m)</label>
+            <div class="input-row">
+                <input type="range" id="l_range" min="0.01" max="0.5" step="0.001" value="0.05"
+                       oninput="syncInput('l_range', 'l_num'); calc();">
+                <input type="number" id="l_num" value="0.050" step="0.001"
+                       oninput="syncInput('l_num', 'l_range'); calc();">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>磁场强度 B (T)</label>
+            <div class="input-row">
+                <input type="range" id="b_range" min="0.1" max="10" step="0.01" value="3"
+                       oninput="syncInput('b_range', 'b_num'); calc();">
+                <input type="number" id="b_num" value="3.00" step="0.01"
+                       oninput="syncInput('b_num', 'b_range'); calc();">
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label>LYSO中心距边缘 W (m)</label>
+            <div class="input-row">
+                <input type="range" id="w_range" min="0.01" max="0.5" step="0.001" value="0.05"
+                       oninput="syncInput('w_range', 'w_num'); calc();">
+                <input type="number" id="w_num" value="0.050" step="0.001"
+                       oninput="syncInput('w_num', 'w_range'); calc();">
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 结果区 ===== -->
+    <div class="section-title">📤 实时计算结果</div>
+
+    <div class="result-grid">
+        <div class="result-item">
+            <div class="label">偏转半径 R</div>
+            <div class="value" id="r_result">—</div>
+        </div>
+        <div class="result-item">
+            <div class="label">偏转角度 θ</div>
+            <div class="value" id="theta_result">—</div>
+        </div>
+        <div class="result-item">
+            <div class="label">磁铁内偏转 n</div>
+            <div class="value" id="n_result">—</div>
+        </div>
+        <div class="result-item">
+            <div class="label">W 剩余</div>
+            <div class="value" id="wout_result">—</div>
+        </div>
+    </div>
+
+    <div class="main-result" id="main_result_box">
+        <div class="label">✅ 暗箱应放置距离 D</div>
+        <div class="value" id="d_result">—</div>
+    </div>
+
+    <!-- 错误提示 -->
+    <div class="alert" id="error_box" style="display:none;"></div>
+</div>
+
+<div class="footer">离线可用 · 无需网络 · 可添加至主屏幕</div>
+
+<script>
+// ============ 物理计算函数 ============
+function calculate(P, L, B, W) {
+    if (B === 0) throw new Error("磁场强度不能为 0");
+
+    const R = 3.33 * P / B;          // 偏转半径
+
+    if (L > R) throw new Error("磁铁长度大于偏转半径，电子无法穿出磁场！");
+
+    const theta = Math.asin(L / R);  // 弧度
+    const thetaDeg = theta * 180 / Math.PI;
+
+    // 磁铁内部偏转距离 n
+    let n;
+    if (theta === 0) {
+        n = 0;
+    } else {
+        const tanT = Math.tan(theta);
+        const a = 1;
+        const b = (2 * L) / tanT;
+        const c = -(L * L);
+        const disc = b * b - 4 * a * c;
+        const n1 = (-b + Math.sqrt(disc)) / (2 * a);
+        const n2 = (-b - Math.sqrt(disc)) / (2 * a);
+        n = Math.max(n1, n2);
+    }
+
+    const wOut = W - n;              // 剩余横向距离
+    const D = wOut / Math.tan(theta); // 暗箱距离
+
+    return { R, thetaDeg, n, wOut, D };
+}
+
+// ============ UI 更新 ============
+function calc() {
+    const P = parseFloat(document.getElementById('p_num').value);
+    const L = parseFloat(document.getElementById('l_num').value);
+    const B = parseFloat(document.getElementById('b_num').value);
+    const W = parseFloat(document.getElementById('w_num').value);
+
+    const errBox = document.getElementById('error_box');
+    errBox.style.display = 'none';
+
+    if (isNaN(P) || isNaN(L) || isNaN(B) || isNaN(W)) return;
+
+    try {
+        const res = calculate(P, L, B, W);
+        document.getElementById('r_result').textContent = res.R.toFixed(4) + ' m';
+        document.getElementById('theta_result').textContent = res.thetaDeg.toFixed(4) + '°';
+        document.getElementById('n_result').textContent = res.n.toFixed(6) + ' m';
+        document.getElementById('wout_result').textContent = res.wOut.toFixed(4) + ' m';
+        document.getElementById('d_result').textContent = res.D.toFixed(4) + ' m';
+        document.getElementById('main_result_box').style.display = '';
+    } catch (e) {
+        document.getElementById('r_result').textContent = '—';
+        document.getElementById('theta_result').textContent = '—';
+        document.getElementById('n_result').textContent = '—';
+        document.getElementById('wout_result').textContent = '—';
+        document.getElementById('d_result').textContent = '—';
+        document.getElementById('main_result_box').style.display = 'none';
+        errBox.style.display = '';
+        errBox.textContent = '⚠️ ' + e.message;
+    }
+}
+
+// 滑块和数字框双向同步
+function syncInput(fromId, toId) {
+    const from = document.getElementById(fromId);
+    const to = document.getElementById(toId);
+    to.value = parseFloat(from.value).toFixed(fromId.includes('l') || fromId.includes('w') ? 3 : 2);
+}
+
+// 初始化
+calc();
+</script>
+</body>
+</html>

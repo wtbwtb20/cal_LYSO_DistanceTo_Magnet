@@ -5,13 +5,13 @@ import pandas
 import matplotlib
 import matplotlib.pyplot as plt
 import math
-L_Magnet = 0.20 #磁铁的物理长度，即沿着电子前进方向的磁铁长度，假设为0.15m
-P_electron = 0.1 #电子能量400MeV
-B_Magnet = 1    #磁铁磁场强度
+L_Magnet = 0.05 #磁铁的物理长度，即沿着电子前进方向的磁铁长度，假设为0.15m
+P_electron = 0.4 #电子能量400MeV
+B_Magnet = 3    #磁铁磁场强度
 R_deflection = 3.33*P_electron/B_Magnet  #能量为P的电子在磁场强度为B中偏转半径
 print(f"\033[33m偏转半径为：{R_deflection} 米，注意需要确保R>L\033[0m")
 theta_rad = arcsin(L_Magnet/R_deflection) #电子从进入磁铁到飞出磁铁的偏转角度，飞出后沿直线运动
-theta_Deg = math.degrees(theta_rad)
+theta_Deg = math.degrees(theta_rad) 
 print(f"\033[33m偏转角度为：{theta_Deg} 度\033[0m")
 #下面计算电子在磁铁内部的偏转距离
 def calculate_deflection_distance(L, theta_deg):
@@ -55,7 +55,7 @@ print(f"磁铁长度 L = {L_input} m, 偏转角 theta = {theta_input}°")
 print(f"\033[33m电子在磁铁内部的偏转距离 n = {n_result:.6f} 米，注意需要确保电子束中心在垂直电子束传播方向上距离C形口至少为：{n_result}米\033[0m")
 
 #下面求解暗箱应该放在磁铁后面多远
-W_total = 0.2  #这是暗箱中LYSO中心距离暗箱边缘的距离,包含磁铁内部偏转距离
+W_total = 0.05  #这是暗箱中LYSO中心距离暗箱边缘的距离,包含磁铁内部偏转距离
 W_out = W_total-n_result  #减去磁铁内部偏转的距离
 D_out = W_out/math.tan(theta_rad)
 print(f"\033[35m磁铁外边缘距离暗箱距离应该为：{D_out}米")

@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>双磁铁 LYSO 距离计算</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f4f9;
+            margin: 0;
+            padding: 15px;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        h2 {
+            text-align: center;
+            color: #2c3e50;
+            font-size: 22px;
+            margin-top: 0;
+        }
+        .input-group {
+            margin-bottom: 12px;
+        }
+        .input-group label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: #555;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 16px; /* 16px防止iOS自动放大 */
+        }
+        .section-title {
+            background-color: #eef2f5;
+            padding: 8px;
+            border-radius: 6px;
+            margin: 15px 0 10px 0;
+            font-size: 15px;
+            color: #2c3e50;
+            font-weight: bold;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #007aff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            margin-top: 15px;
+            margin-bottom: 20px;
+            cursor: pointer;
+        }
+        button:active {
+            background-color: #005bb5;
+        }
+        .result-box {
+            background-color: #fafafa;
+            border-left: 4px solid #007aff;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 14px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+            word-wrap: break-word;
+        }
+        .result-item {
+            margin-bottom: 8px;
+            border-bottom: 1px dashed #eee;
+            padding-bottom: 8px;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        span.highlight { color: #d97706; font-weight: bold; } /* 黄色主题 */
+        span.danger { color: #dc2626; font-weight: bold; }   /* 红色主题 */
+        span.success { color: #8b5cf6; font-weight: bold; font-size: 16px; } /* 紫色主题, 对应原版洋红色 */
+        .error-msg { color: red; font-weight: bold; text-align: center; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>双磁铁偏转与暗箱距离计算</h2>
+    
+    <div class="section-title">全局参数</div>
+    <div class="input-group">
+        <label>电子能量 P_electron (MeV / 1000 = 单位)</label>
+        <input type="number" id="P_electron" value="0.4" step="0.01">
+    </div>
+    <div class="input-group">
+        <label>LYSO中心距边缘 W_total (米)</label>
+        <input type="number" id="W_total" value="0.05" step="0.01">
+    </div>
+
+    <div class="section-title">第一块磁铁参数</div>
+    <div class="input-group">
+        <label>磁铁物理长度 L_Magnet (米)</label>
+        <input type="number" id="L_Magnet" value="0.05" step="0.01">
+    </div>
+    <div class="input-group">
+        <label>磁场强度 B_Magnet (特斯拉)</label>
+        <input type="number" id="B_Magnet" value="0.4" step="0.1">
+    </div>
+
+    <div class="section-title">第二块磁铁及区间参数</div>
+    <div class="input-group">
+        <label>两磁铁之间距离 n_between_magnets (米)</label>
+        <input type="number" id="n_between" value="0.1" step="0.01">
+    </div>
+    <div class="input-group">
+        <label>第二块磁铁长度 L_Magnet2 (米)</label>
+        <input type="number" id="L_Magnet2" value="0.08" step="0.01">
+    </div>
+    <div class="input-group">
+        <label>第二块磁铁磁场强度 B_Magnet2 (特斯拉)</label>
+        <input type="number" id="B_Magnet2" value="0.9" step="0.1">
+    </div>
+
+    <button onclick="calculate()">🚀 执 行 计 算</button>
+
+    <div id="error-output" class="error-msg"></div>
+    <div id="result-output" style="display: none;">
+        <!-- 第一块磁铁结果 -->
+        <div class="result-box">
+            <b>第一块磁铁计算结果：</b><br>
+            <div class="result-item">偏转半径 R1: <span class="highlight" id="r1"></span> 米</div>
+            <div class="result-item">偏转角度 θ1: <span class="highlight" id="theta1"></span> 度</div>
+            <div class="result-item">内部偏转距离 n1: <span class="highlight" id="n1"></span> 米 (确保C形口至少距离此数字)</div>
+        </div>
+
+        <!-- 两块磁铁中间及第二块磁铁 -->
+        <div class="result-box">
+            <b>两磁铁之间及第二块磁铁计算结果：</b><br>
+            <div class="result-item">第二块磁铁偏转半径 R2: <span class="highlight" id="r2"></span> 米</div>
+            <div class="result-item">两磁铁之间横向距离 n2: <span class="highlight" id="n2"></span> 米</div>
+            <div class="result-item">第二块磁铁圆心角 β: <span class="highlight" id="beita"></span> 度</div>
+            <div class="result-item">总出射角 θ2: <span class="highlight" id="theta2"></span> 度</div>
+            <div class="result-item">第二块内部位移 Y: <span class="highlight" id="offset2"></span> 米</div>
+        </div>
+
+        <!-- 总结果与暗箱摆放位置 -->
+        <div class="result-box" style="background-color: #f0f7ff; border-left-color: #8b5cf6;">
+            <b>综合位移与最终结果：</b><br>
+            <div class="result-item">总横向偏转距离: <span class="highlight" id="total_offset"></span> 米</div>
+            <div class="result-item">纵向(gamma传播方向)总位移: <span class="highlight" id="x_out"></span> 米</div>
+            <div class="result-item">
+                <span class="success">🎯 第二块磁铁外边缘距离暗箱应该为：<span id="d_out"></span> 米</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function calculate() {
+        document.getElementById("error-output").innerHTML = "";
+        
+        // 读取输入数据
+        const P = parseFloat(document.getElementById("P_electron").value);
+        const W_total = parseFloat(document.getElementById("W_total").value);
+        const L1 = parseFloat(document.getElementById("L_Magnet").value);
+        const B1 = parseFloat(document.getElementById("B_Magnet").value);
+        const gap = parseFloat(document.getElementById("n_between").value);
+        const L2 = parseFloat(document.getElementById("L_Magnet2").value);
+        const B2 = parseFloat(document.getElementById("B_Magnet2").value);
+
+        try {
+            // --------- 第 1 块磁铁计算 ---------
+            const R1 = 3.33 * P / B1;
+            if (R1 <= L1) throw "第一块磁铁：偏转半径 R <= L，电子无法穿出";
+            
+            const theta1_rad = Math.asin(L1 / R1);
+            const theta1_deg = theta1_rad * (180 / Math.PI);
+
+            // 求解内部偏转距离 n1
+            let n1_val = 0;
+            if (theta1_rad !== 0) {
+                const tan_t = Math.tan(theta1_rad);
+                const a = 1.0;
+                const b = (2 * L1) / tan_t;
+                const c = -(L1 * L1);
+                const disc = b*b - 4*a*c;
+                if (disc < 0) throw "第一块磁铁 n 无实数解";
+                n1_val = Math.max( (-b + Math.sqrt(disc)) / (2*a), (-b - Math.sqrt(disc)) / (2*a) );
+            }
+
+            // --------- 中间飞行阶段 ---------
+            const n2_val = gap * Math.tan(theta1_rad);
+
+            // --------- 第 2 块磁铁计算 ---------
+            const R2 = 3.33 * P / B2;
+            if (R2 <= L2) throw "第二块磁铁：偏转半径 R2 <= L2";
+
+            const sin_val2 = Math.sin(theta1_rad) + L2 / R2;
+            if (sin_val2 > 1 || sin_val2 < -1) throw "第二块磁铁内部计算超出域值 (无法计算 arcsin)";
+            
+            const theta2_rad = Math.asin(sin_val2);
+            const theta2_deg = theta2_rad * (180 / Math.PI);
+            
+            const beita_deg = (theta2_rad - theta1_rad) * (180 / Math.PI);
+
+            const offset2_val = R2 * (Math.cos(theta1_rad) - Math.cos(theta2_rad));
+
+            // --------- 总结果 ---------
+            const total_offset = n1_val + n2_val + offset2_val;
+            const x_out = L1 + gap + L2;
+            
+            const W_out = W_total - total_offset;
+            const D_out = W_out / Math.tan(theta2_rad);
+
+            // --------- 更新 UI ---------
+            document.getElementById("r1").innerText = R1.toFixed(6);
+            document.getElementById("theta1").innerText = theta1_deg.toFixed(6);
+            document.getElementById("n1").innerText = n1_val.toFixed(6);
+
+            document.getElementById("r2").innerText = R2.toFixed(6);
+            document.getElementById("n2").innerText = n2_val.toFixed(6);
+            document.getElementById("beita").innerText = beita_deg.toFixed(6);
+            document.getElementById("theta2").innerText = theta2_deg.toFixed(6);
+            document.getElementById("offset2").innerText = offset2_val.toFixed(6);
+
+            document.getElementById("total_offset").innerText = total_offset.toFixed(6);
+            document.getElementById("x_out").innerText = x_out.toFixed(6);
+            document.getElementById("d_out").innerText = D_out.toFixed(6);
+
+            document.getElementById("result-output").style.display = "block";
+        } catch (err) {
+            document.getElementById("result-output").style.display = "none";
+            document.getElementById("error-output").innerHTML = "计算错误: " + err;
+        }
+    }
+</script>
+</body>
+</html>
